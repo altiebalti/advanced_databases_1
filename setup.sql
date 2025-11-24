@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -7,12 +7,12 @@ CREATE TABLE users (
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     teacher_id INTEGER NOT NULL REFERENCES users(id),
@@ -23,14 +23,14 @@ CREATE TABLE courses (
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE modules (
+CREATE TABLE IF NOT EXISTS modules (
     id SERIAL PRIMARY KEY,
     course_id INTEGER NOT NULL REFERENCES courses(id),
     title VARCHAR(255) NOT NULL,
     order_index INTEGER NOT NULL
 );
 
-CREATE TABLE lessons (
+CREATE TABLE IF NOT EXISTS lessons (
     id SERIAL PRIMARY KEY,
     module_id INTEGER NOT NULL REFERENCES modules(id),
     title VARCHAR(255) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE lessons (
     updated_by INTEGER REFERENCES users(id)
 );
 
-CREATE TABLE enrollments (
+CREATE TABLE IF NOT EXISTS enrollments (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
     course_id INTEGER NOT NULL REFERENCES courses(id),
@@ -48,7 +48,7 @@ CREATE TABLE enrollments (
     UNIQUE(user_id, course_id)
 );
 
-CREATE TABLE lesson_progress (
+CREATE TABLE IF NOT EXISTS lesson_progress (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
     lesson_id INTEGER NOT NULL REFERENCES lessons(id),
@@ -56,14 +56,14 @@ CREATE TABLE lesson_progress (
     UNIQUE(user_id, lesson_id)
 );
 
-CREATE TABLE assignments (
+CREATE TABLE IF NOT EXISTS assignments (
     id SERIAL PRIMARY KEY,
     lesson_id INTEGER NOT NULL REFERENCES lessons(id),
     title VARCHAR(255) NOT NULL,
     max_score INTEGER DEFAULT 100
 );
 
-CREATE TABLE submissions (
+CREATE TABLE IF NOT EXISTS submissions (
     id SERIAL PRIMARY KEY,
     assignment_id INTEGER NOT NULL REFERENCES assignments(id),
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -71,7 +71,7 @@ CREATE TABLE submissions (
     score INTEGER NULL
 );
 
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
     id SERIAL PRIMARY KEY,
     course_id INTEGER NOT NULL REFERENCES courses(id),
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -80,14 +80,14 @@ CREATE TABLE reviews (
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE certificates (
+CREATE TABLE IF NOT EXISTS certificates (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
     course_id INTEGER NOT NULL REFERENCES courses(id),
     code VARCHAR(100) UNIQUE NOT NULL
 );
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
     course_id INTEGER NOT NULL REFERENCES courses(id),
@@ -95,14 +95,14 @@ CREATE TABLE payments (
     status VARCHAR(50) DEFAULT 'pending'
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS  notifications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE materials (
+CREATE TABLE IF NOT EXISTS materials (
     id SERIAL PRIMARY KEY,
     lesson_id INTEGER NOT NULL REFERENCES lessons(id),
     title VARCHAR(255) NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE materials (
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE TABLE discussions (
+CREATE TABLE IF NOT EXISTS  discussions (
     id SERIAL PRIMARY KEY,
     lesson_id INTEGER NOT NULL REFERENCES lessons(id),
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -119,15 +119,15 @@ CREATE TABLE discussions (
     is_deleted BOOLEAN DEFAULT FALSE
 );
 
-CREATE INDEX idx_courses_teacher ON courses(teacher_id);
-CREATE INDEX idx_enrollments_user ON enrollments(user_id);
-CREATE INDEX idx_lessons_module ON lessons(module_id);
+CREATE INDEX IF NOT EXISTS idx_courses_teacher ON courses(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id);
+CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons(module_id);
 
-CREATE INDEX idx_courses_active ON courses(id) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS idx_courses_active ON courses(id) WHERE is_deleted = FALSE;
 
-CREATE INDEX idx_enrollments_user_course ON enrollments(user_id, course_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_user_course ON enrollments(user_id, course_id);
 
-CREATE INDEX idx_users_email_hash ON users USING HASH (email);
+CREATE INDEX IF NOT EXISTS idx_users_email_hash ON users USING HASH (email);
 
 CREATE OR REPLACE FUNCTION update_timestamp()
 RETURNS TRIGGER AS $$
@@ -137,17 +137,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_courses_timestamp
+CREATE OR REPLACE TRIGGER update_courses_timestamp
     BEFORE UPDATE ON courses
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
 
-CREATE TRIGGER update_lessons_timestamp
+CREATE OR REPLACE TRIGGER update_lessons_timestamp
     BEFORE UPDATE ON lessons
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
 
-CREATE TRIGGER update_discussions_timestamp
+CREATE OR REPLACE TRIGGER update_discussions_timestamp
     BEFORE UPDATE ON discussions
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
@@ -353,3 +353,16 @@ WITH u AS (
 INSERT INTO enrollments (user_id, course_id, status)
 SELECT u.id, c.id, 'active' FROM u, c
 ON CONFLICT (user_id, course_id) DO NOTHING;
+ 
+CREATE TABLE IF NOT EXISTS activity_events (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    course_id INTEGER NULL REFERENCES courses(id),
+    type VARCHAR(100) NOT NULL,
+    metadata JSONB NULL,
+    ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_events_user_ts ON activity_events(user_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_course_ts ON activity_events(course_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_type_ts ON activity_events(type, ts DESC);

@@ -10,13 +10,19 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down -v",
     "db:logs": "docker compose logs -f postgres",
-    "db:setup": "bash ./scripts/run-setup.sh"
+    "db:setup": "bash ./scripts/run-setup.sh",
+    "nosql:up": "docker compose up -d mongo redis",
+    "nosql:down": "docker compose stop mongo redis",
+    "nosql:logs": "docker compose logs -f mongo redis",
+    "bench": "tsx scripts/bench.ts"
   },
   "dependencies": {
+    "mongodb": "^6.9.0",
     "next": "15.5.6",
     "pg": "^8.12.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "redis": "^4.7.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -28,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   },
   "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c"
